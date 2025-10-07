@@ -9,6 +9,8 @@ import pytest
 # Adjust this import path to match your project's structure
 from forklet.infrastructure.rate_limiter import RateLimiter, RateLimitInfo
 
+# Mark all tests in this file as asyncio
+# pytestmark = pytest.mark.asyncio
 
 
 ## 1. RateLimitInfo Helper Class Tests
@@ -125,7 +127,7 @@ async def test_acquire_uses_adaptive_delay(mock_sleep):
     rl = RateLimiter(default_delay=1.0)
     
     # Mock time.time() to simulate time passing
-    with patch('time.time', side_effect=[1000.0, 1000.1, 1000.2, 1000.3]) as mock_time:
+    with patch('time.time', side_effect=[1000.0, 1000.1, 1000.2, 1000.3]):
         # Ensure rate limit is not exhausted
         rl.rate_limit_info.remaining = 2000
         
@@ -137,6 +139,12 @@ async def test_acquire_uses_adaptive_delay(mock_sleep):
         # SECOND call: This call is close to the first one, triggering the delay.
         await rl.acquire()
         
+        # Check that sleep was called. The exact value has jitter, so we check if it was called.
+        # mock_sleep.assert_called()
+        # The first call to time.time() is at the start of acquire(),
+        # the second is for _last_request. The delay calculation uses the first one.
+        # Expected delay is around 1.0 seconds.
+        # assert mock_sleep.call_args[0][0] > 0.5
         # Assert that sleep was finally called on the second run
         mock_sleep.assert_called()
         # The delay should be > 0 because elapsed time (0.1s) < default_delay (1.0s)
@@ -147,7 +155,8 @@ async def test_acquire_updates_last_request_time():
     """Test that acquire() correctly updates the _last_request timestamp."""
     rl = RateLimiter()
     
-    with patch('time.time', return_value=12345.0) as mock_time:
+    with patch('time.time', return_value=12345.0):
+        # Patch sleep to make the test run instantly
         with patch('asyncio.sleep'):
             await rl.acquire()
             assert rl._last_request == 12345.0

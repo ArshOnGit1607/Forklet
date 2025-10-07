@@ -117,15 +117,22 @@ def download(
 def info(ctx, repository: str, ref: str):
     """Show information about a repository."""
 
-    try:
+    async def get_repo_info():
+        """Fetch repository information asynchronously."""
+
         app = ForkletCLI()
         app.initialize_services(ctx.obj.get('token'))
         
         owner, repo_name = app.parse_repository_string(repository)
         
         # Get repository info
-        repo_info =   app.github_service.get_repository_info(owner, repo_name)
-        git_ref = app.github_service.resolve_reference(owner, repo_name, ref)
+        repo_info = await app.github_service.get_repository_info(owner, repo_name)
+        git_ref = await app.github_service.resolve_reference(owner, repo_name, ref)
+
+        return repo_info, git_ref
+
+    try:
+        repo_info, git_ref = asyncio.run(get_repo_info())
         
         # Display information
         click.echo(f"📊 Repository: {repo_info.full_name}")
