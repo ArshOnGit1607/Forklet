@@ -126,7 +126,9 @@ class ForkletCLI:
         token: Optional[str],
         concurrent: int,
         overwrite: bool,
-        progress: bool = True
+        progress: bool = True,
+        dry_run: bool = False,
+        verbose: bool = False,
     ) -> None:
         """
         Execute the download operation.
@@ -168,6 +170,7 @@ class ForkletCLI:
                 max_concurrent_downloads = concurrent,
                 overwrite_existing = overwrite,
                 show_progress_bars = progress
+                ,dry_run = dry_run
             )
             
             # Execute download
@@ -175,9 +178,9 @@ class ForkletCLI:
                 f"🚀 Starting download with {concurrent} concurrent workers..."
             )
             result = await self.orchestrator.execute_download(request)
-            
-            # Display results
-            self.display_results(result)
+
+            # Display results (pass through verbose flag)
+            self.display_results(result, verbose=verbose)
             
         except (
             RateLimitError, AuthenticationError, 
@@ -191,7 +194,7 @@ class ForkletCLI:
             logger.exception("Unexpected error in download operation")
             sys.exit(1)
     
-    def display_results(self, result: DownloadResult) -> None:
+    def display_results(self, result: DownloadResult, verbose: bool = False) -> None:
         """
         Display download results in a user-friendly format.
         
@@ -206,9 +209,28 @@ class ForkletCLI:
             
             if result.average_speed is not None:
                 click.echo(f"   ⚡ Speed: {result.average_speed:.2f} bytes/sec")
-            
+
             if result.skipped_files:
                 click.echo(f"   ⏭️  Skipped: {len(result.skipped_files)} files")
+
+            # When verbose, display file paths (matched / downloaded / skipped)
+            if verbose:
+                # Matched files (available in dry-run and set by orchestrator)
+                if hasattr(result, 'matched_files') and result.matched_files:
+                    click.echo("   🔎 Matched files:")
+                    for p in result.matched_files:
+                        click.echo(f"      {p}")
+
+                # For completed runs, show downloaded and skipped paths
+                if result.downloaded_files:
+                    click.echo("   📥 Downloaded paths:")
+                    for p in result.downloaded_files:
+                        click.echo(f"      {p}")
+
+                if result.skipped_files:
+                    click.echo("   ⏭️  Skipped paths:")
+                    for p in result.skipped_files:
+                        click.echo(f"      {p}")
                 
         elif hasattr(result, 'failed_files') and result.failed_files:
             click.echo("⚠️  Download completed with errors:")

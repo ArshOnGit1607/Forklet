@@ -106,6 +106,9 @@ class DownloadRequest:
     # Authentication
     token: Optional[str] = None
 
+    # Dry-run preview mode (do not write files)
+    dry_run: bool = False
+
     # Metadata
     request_id: str = field(default_factory=lambda: f"req_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
     created_at: datetime = field(default_factory=datetime.now)
@@ -189,6 +192,8 @@ class DownloadResult:
     downloaded_files: List[str] = field(default_factory=list)
     skipped_files: List[str] = field(default_factory=list)
     failed_files: Dict[str, str] = field(default_factory=dict)
+    # Matched file paths (populated by orchestrator for verbose reporting)
+    matched_files: List[str] = field(default_factory=list)
 
     # Metadata
     started_at: datetime = field(default_factory=datetime.now)
